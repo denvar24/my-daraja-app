@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fundraiser Page</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; line-height: 1.6; }
+    .card { background: #f4f4f4; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    input, button { padding: 10px; width: 100%; margin: 8px 0; box-sizing: border-box; }
+    button { background-color: #00be63; color: white; border: none; font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <h1>Help Support My Effort </h1>
+  
+  <div class="card">
+    <h3>Make an M-PESA Donation</h3>
+    <form id="donateForm">
+      <label>Phone Number (07XX... or 01XX...)</label>
+      <input type="text" id="phone" placeholder="e.g. 0712345678" required />
+      
+      <label>Amount (KES)</label>
+      <input type="number" id="amount" placeholder="e.g. 100" required />
+      
+      <button type="submit">Donate Now</button>
+    </form>
+    <div id="status"></div>
+  </div>
+
+  <hr/>
+
+  <!-- Essay Section Embedded on Page -->
+  <section class="card">
+    <h2>Safaricom Daraja API Integration</h2>
+    
+    <h3>Introduction</h3>
+    <p>
+      The Safaricom Daraja API acts as an integration gateway bridging modern application backends directly to Safaricom's financial infrastructure. By facilitating programmatic access to M-PESA payment tools, developers can construct automated payment workflows natively within web applications.
+    </p>
+
+    <h3>How to Integrate and Use the API</h3>
+    <p>
+      Integrating Daraja's M-PESA Express (STK Push) involves a structured multi-stage HTTP handshake:
+    </p>
+    <ol>
+      <li><strong>Authentication:</strong> Using Basic Auth with a client key and secret, the developer sends a request to the Daraja OAuth endpoint to acquire a temporary Bearer access token.</li>
+      <li><strong>Request Construction:</strong> An STK Push request payload is created containing the donor's phone number, amount, business shortcode, timestamp, and a base64-encoded security password.</li>
+      <li><strong>Prompt Dispatch:</strong> The payload is dispatched via HTTP POST to the STK Push endpoint. Safaricom's server processes this and forces a SIM Toolkit prompt directly onto the user's mobile screen, requesting their M-PESA PIN.</li>
+      <li><strong>Asynchronous Callback Resolution:</strong> Once the user confirms or declines the PIN prompt, Safaricom posts an asynchronous JSON payload to the developer's registered HTTPS Callback URL to record transaction status.</li>
+    </ol>
+
+    <h3>Key Benefits of Daraja API for Web Fundraising</h3>
+    <ul>
+      <li><strong>Frictionless UX:</strong> Eliminates manual entry of PayBill numbers and account references, drastically reducing drop-off rates during payment checkout.</li>
+      <li><strong>Real-Time Verification:</strong> System callback handlers immediately update order states or fundraising counters without manual verification of SMS receipts.</li>
+      <li><strong>High Security:</strong> M-PESA PIN entry occurs natively within the encrypted SIM environment, meaning web applications never handle sensitive financial secrets directly.</li>
+      <li><strong>Scalability:</strong> Built to process high volumes of concurrent transactions automatically, ideal for large-scale donor drives.</li>
+    </ul>
+  </section>
+
+  <script>
+    document.getElementById('donateForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerText = 'Initiating prompt on phone...';
+
+      const phone = document.getElementById('phone').value;
+      const amount = document.getElementById('amount').value;
+
+      try {
+        const res = await fetch('http://localhost:3000/api/stkpush', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, amount })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          statusDiv.innerText = 'Check your phone! Enter your M-PESA PIN to complete the donation.';
+        } else {
+          statusDiv.innerText = 'Error: ' + (data.error.errorMessage || 'Failed to send prompt');
+        }
+      } catch (err) {
+        statusDiv.innerText = 'Network Error: Check server connection.';
+      }
+    });
+  </script>
+</body>
+</html>
